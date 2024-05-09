@@ -23,7 +23,7 @@ class Config:
         :param md5: Flag to include MD5 hash information.
         """
         self.input_dir = input_dir
-        self.output_path = os.path.join(os.path.dirname(input_dir), f"{os.path.basename(input_dir)}_info.csv")
+        self.output_path = os.path.join(os.path.dirname(input_dir), f"{os.path.basename(input_dir)}_report_info.csv")
         self.log_path = os.path.join(os.path.dirname(input_dir), f"{os.path.basename(input_dir)}_error.log")
         self.family = family
         self.cpu_type = cpu_type
@@ -190,13 +190,13 @@ class Labeler:
         labels.sort(key=lambda x: x[0])
 
         # Write the header based on the requested fields
-        header = ["fileName"]
+        header = ["file_name"]
         if self.config.family:
             header.append("family")
         if self.config.cpu_type:
-            header.append("cpuType")
+            header.append("cpu_type")
         if self.config.first_seen:
-            header.append("firstSeen")
+            header.append("first_seen")
         if self.config.size:
             header.append("size")
         if self.config.md5:
