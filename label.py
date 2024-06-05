@@ -11,13 +11,13 @@ from pathlib import Path
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
 class Config:
-    def __init__(self, input_dir, family, cpu_type, first_seen, size, md5):
+    def __init__(self, input_dir, family, cpu, first_seen, size, md5):
         """
         Initialize the configuration object.
 
         :param input_dir: The input directory containing the JSON files.
         :param family: Flag to include family information.
-        :param cpu_type: Flag to include CPU type information.
+        :param cpu: Flag to include CPU type information.
         :param first_seen: Flag to include first seen information.
         :param size: Flag to include file size information.
         :param md5: Flag to include MD5 hash information.
@@ -26,7 +26,7 @@ class Config:
         self.output_path = os.path.join(os.path.dirname(input_dir), f"{os.path.basename(input_dir)}_report_info.csv")
         self.log_path = os.path.join(os.path.dirname(input_dir), f"{os.path.basename(input_dir)}_error.log")
         self.family = family
-        self.cpu_type = cpu_type
+        self.cpu = cpu
         self.first_seen = first_seen
         self.size = size
         self.md5 = md5
@@ -111,7 +111,7 @@ class Labeler:
         """
         file_name = os.path.basename(json_file)[:-5]
         family = None
-        cpu_type = None
+        cpu = None
         first_seen = None
         size = None
         md5 = None
@@ -139,9 +139,9 @@ class Labeler:
                     finally:
                         os.remove(json_file + ".tmp")
 
-            if self.config.cpu_type:
+            if self.config.cpu:
                 try:
-                    cpu_type = data["additional_info"]["exiftool"]["CPUType"]
+                    cpu = data["additional_info"]["gandelf"]["header"]["machine"]
                 except KeyError:
                     pass
 
@@ -168,7 +168,7 @@ class Labeler:
         except Exception as e:
             self.logger.error(f"Error processing JSON file ({json_file}): {str(e)}")
 
-        return file_name, family, cpu_type, first_seen, size, md5
+        return file_name, family, cpu, first_seen, size, md5
 
     def label_files(self):
         """
@@ -183,8 +183,8 @@ class Labeler:
             futures = [executor.submit(self.process_json, json_file) for json_file in self.file_list]
             
             for future in tqdm(as_completed(futures), total=len(futures), desc="Labeling", unit="file"):
-                file_name, family, cpu_type, first_seen, size, md5 = future.result()
-                labels.append((file_name, family, cpu_type, first_seen, size, md5))
+                file_name, family, cpu, first_seen, size, md5 = future.result()
+                labels.append((file_name, family, cpu, first_seen, size, md5))
 
         # Sort the labels list based on the file name
         labels.sort(key=lambda x: x[0])
@@ -193,8 +193,8 @@ class Labeler:
         header = ["file_name"]
         if self.config.family:
             header.append("family")
-        if self.config.cpu_type:
-            header.append("cpu_type")
+        if self.config.cpu:
+            header.append("CPU")
         if self.config.first_seen:
             header.append("first_seen")
         if self.config.size:
@@ -208,7 +208,7 @@ class Labeler:
                 row = [label[0]]
                 if self.config.family:
                     row.append(label[1] or '')
-                if self.config.cpu_type:
+                if self.config.cpu:
                     row.append(label[2] or '')
                 if self.config.first_seen:
                     row.append(label[3] or '')
@@ -231,7 +231,7 @@ def parse_arguments():
     parser = argparse.ArgumentParser(description="Labeling Tool")
     parser.add_argument("--input_folder", "-i", required=True, help="Input dataset report folder")
     parser.add_argument("--family", "-f", action="store_true", help="Include family information")
-    parser.add_argument("--cpu_type", "-c", action="store_true", help="Include CPU type information")
+    parser.add_argument("--cpu", "-c", action="store_true", help="Include CPU type information")
     parser.add_argument("--first_seen", "-s", action="store_true", help="Include first seen information")
     parser.add_argument("--size", "-z", action="store_true", help="Include file size information")
     parser.add_argument("--md5", "-m", action="store_true", help="Include MD5 hash information")
@@ -243,7 +243,7 @@ def main():
     """
     args = parse_arguments()
     
-    config = Config(args.input_folder, args.family, args.cpu_type, args.first_seen, args.size, args.md5)
+    config = Config(args.input_folder, args.family, args.cpu, args.first_seen, args.size, args.md5)
     
     labeler = Labeler(config)
     labeler.run()
